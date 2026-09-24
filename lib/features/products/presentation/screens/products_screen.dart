@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/products_provider.dart';
 import '../../../cart/presentation/providers/cart_provider.dart';
 import '../../../../core/theme/theme_provider.dart';
+import '../../../../core/widgets/failure_view.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class ProductsScreen extends ConsumerWidget {
@@ -20,10 +21,15 @@ class ProductsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Store', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Store',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(
-            icon: Icon(themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode),
+            icon: Icon(
+              themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
+            ),
             onPressed: () => ref.read(themeProvider.notifier).toggleTheme(),
           ),
           Stack(
@@ -49,12 +55,16 @@ class ProductsScreen extends ConsumerWidget {
                     ),
                     child: Text(
                       '${cartItems.length}',
-                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
             ],
-          )
+          ),
         ],
       ),
       body: Column(
@@ -78,12 +88,12 @@ class ProductsScreen extends ConsumerWidget {
                 ref.read(searchQueryProvider.notifier).setQuery(value);
                 // Clear category if we are searching
                 if (value.isNotEmpty) {
-                   ref.read(selectedCategoryProvider.notifier).setCategory(null);
+                  ref.read(selectedCategoryProvider.notifier).setCategory(null);
                 }
               },
             ),
           ),
-          
+
           // 2. CATEGORY CHIPS
           categoriesAsync.when(
             data: (categories) => SizedBox(
@@ -101,40 +111,76 @@ class ProductsScreen extends ConsumerWidget {
                       label: const Text('All'),
                       selected: isSelected,
                       onSelected: (selected) {
-                        ref.read(selectedCategoryProvider.notifier).setCategory(null);
-                        ref.read(searchQueryProvider.notifier).setQuery(''); // clear search
+                        ref
+                            .read(selectedCategoryProvider.notifier)
+                            .setCategory(null);
+                        ref
+                            .read(searchQueryProvider.notifier)
+                            .setQuery(''); // clear search
                       },
                     );
                   }
-                  
+
                   final category = categories[index - 1];
                   final isSelected = selectedCategory == category;
-                  
+
                   return ChoiceChip(
                     label: Text(category.toUpperCase()),
                     selected: isSelected,
                     onSelected: (selected) {
-                      ref.read(selectedCategoryProvider.notifier).setCategory(category);
-                      ref.read(searchQueryProvider.notifier).setQuery(''); // clear search
+                      ref
+                          .read(selectedCategoryProvider.notifier)
+                          .setCategory(category);
+                      ref
+                          .read(searchQueryProvider.notifier)
+                          .setQuery(''); // clear search
                     },
                   );
                 },
               ),
             ),
-            loading: () => const SizedBox.shrink(),
-            error: (e, st) => const SizedBox.shrink(),
+            loading: () => const SizedBox(
+              height: 50,
+              child: Center(
+                child: SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
+            // Categories are an optional filter, so a failure here should not
+            // take over the screen — offer a quiet retry instead.
+            error: (e, st) => SizedBox(
+              height: 50,
+              child: Center(
+                child: TextButton.icon(
+                  onPressed: () => ref.invalidate(categoriesProvider),
+                  icon: const Icon(Icons.refresh, size: 16),
+                  label: const Text('Categories unavailable. Tap to retry.'),
+                ),
+              ),
+            ),
           ),
-          
+
           const SizedBox(height: 8),
 
           // 3. PRODUCT GRID
           Expanded(
             child: productsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stackTrace) => Center(child: Text('Error: $error')),
+              error: (error, stackTrace) => FailureView(
+                error: error,
+                onRetry: () => ref.read(productsProvider.notifier).refresh(),
+              ),
               data: (products) {
                 if (products.isEmpty) {
-                  return const Center(child: Text('No products found.', style: TextStyle(fontSize: 18)));
+                  return const Center(
+                    child: Text(
+                      'No products found.',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                  );
                 }
 
                 // Grid responsiveness
@@ -148,98 +194,138 @@ class ProductsScreen extends ConsumerWidget {
                   columns = 3;
                 }
 
-                return GridView.builder(
-                  padding: const EdgeInsets.all(16),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: columns,
-                    childAspectRatio: 0.7,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                  ),
-                  itemCount: products.length,
-                  itemBuilder: (context, index) {
-                    final product = products[index];
-                    return InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: () {
-                        context.push('/product', extra: product);
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withAlpha(10),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
-                          )
-                        ]
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                              child: Container(
-                                width: double.infinity,
-                                color: Colors.white, // keep white background for products
-                                child: Hero(
-                                  tag: 'product_image_${product.id}',
-                                  child: Image.network(
-                                    product.thumbnail,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.image_not_supported, color: Colors.grey),
+                return RefreshIndicator(
+                  onRefresh: () =>
+                      ref.read(productsProvider.notifier).refresh(),
+                  child: GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: columns,
+                      childAspectRatio: 0.7,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                    ),
+                    itemCount: products.length,
+                    itemBuilder: (context, index) {
+                      final product = products[index];
+                      return InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () {
+                              context.push('/product', extra: product);
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).cardColor,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withAlpha(10),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 5),
                                   ),
-                                ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: ClipRRect(
+                                      borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(16),
+                                      ),
+                                      child: Container(
+                                        width: double.infinity,
+                                        color: Colors
+                                            .white, // keep white background for products
+                                        child: Hero(
+                                          tag: 'product_image_${product.id}',
+                                          child: Image.network(
+                                            product.thumbnail,
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (context, error, stackTrace) =>
+                                                    const Icon(
+                                                      Icons.image_not_supported,
+                                                      color: Colors.grey,
+                                                    ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.all(12.0),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          product.title,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '\$${product.price.toStringAsFixed(2)}',
+                                          style: const TextStyle(
+                                            color: Colors.deepPurple,
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        SizedBox(
+                                          width: double.infinity,
+                                          child: ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                            ),
+                                            onPressed: () {
+                                              ref
+                                                  .read(cartProvider.notifier)
+                                                  .addProduct(product);
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    '${product.title} added to cart!',
+                                                  ),
+                                                  duration: const Duration(
+                                                    seconds: 1,
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                            child: const Text(
+                                              'Add to Cart',
+                                              style: TextStyle(fontSize: 12),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  product.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '\$${product.price.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    color: Colors.deepPurple, 
-                                    fontWeight: FontWeight.w900, 
-                                    fontSize: 16
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                    ),
-                                    onPressed: () {
-                                      ref.read(cartProvider.notifier).addProduct(product);
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('${product.title} added to cart!'), duration: const Duration(seconds: 1)),
-                                      );
-                                    },
-                                    child: const Text('Add to Cart', style: TextStyle(fontSize: 12)),
-                                  ),
-                                )
-                              ],
-                            ),
                           )
-                        ],
-                      ),
-                    ),
-                  ).animate().fade(duration: 400.ms, delay: (index * 50).ms).slideY(begin: 0.2, duration: 400.ms, curve: Curves.easeOutQuad);
-                },
+                          .animate()
+                          .fade(duration: 400.ms, delay: (index * 50).ms)
+                          .slideY(
+                            begin: 0.2,
+                            duration: 400.ms,
+                            curve: Curves.easeOutQuad,
+                          );
+                    },
+                  ),
                 );
               },
             ),

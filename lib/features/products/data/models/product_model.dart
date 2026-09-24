@@ -24,9 +24,25 @@ class ProductModel extends Product {
       category: json['category'] ?? 'unknown',
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
       images: json['images'] != null ? List<String>.from(json['images']) : [],
-      reviews: json['reviews'] != null 
-          ? (json['reviews'] as List).map((r) => ReviewModel.fromJson(r)).toList()
+      reviews: json['reviews'] != null
+          ? (json['reviews'] as List)
+                .map((r) => ReviewModel.fromJson(r))
+                .toList()
           : [],
+    );
+  }
+
+  factory ProductModel.fromEntity(Product product) {
+    return ProductModel(
+      id: product.id,
+      title: product.title,
+      description: product.description,
+      price: product.price,
+      thumbnail: product.thumbnail,
+      category: product.category,
+      rating: product.rating,
+      images: product.images,
+      reviews: product.reviews,
     );
   }
 
@@ -40,7 +56,10 @@ class ProductModel extends Product {
       'category': category,
       'rating': rating,
       'images': images,
-      'reviews': reviews.map((r) => (r as ReviewModel).toJson()).toList(),
+      // fromEntity rather than a cast: reviews may be plain domain entities.
+      'reviews': reviews
+          .map((r) => ReviewModel.fromEntity(r).toJson())
+          .toList(),
     };
   }
 }

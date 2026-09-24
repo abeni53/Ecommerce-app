@@ -15,11 +15,15 @@ class ReviewModel extends Review {
     );
   }
 
+  factory ReviewModel.fromEntity(Review review) {
+    return ReviewModel(
+      rating: review.rating,
+      comment: review.comment,
+      reviewerName: review.reviewerName,
+    );
+  }
+
   Map<String, dynamic> toJson() {
-    return {
-      'rating': rating,
-      'comment': comment,
-      'reviewerName': reviewerName,
-    };
+    return {'rating': rating, 'comment': comment, 'reviewerName': reviewerName};
   }
 }

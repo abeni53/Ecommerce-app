@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../../../products/presentation/providers/wishlist_provider.dart';
+import '../../../../core/widgets/failure_view.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -21,7 +22,7 @@ class ProfileScreen extends ConsumerWidget {
       ),
       body: authState.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        error: (err, stack) => FailureView(error: err),
         data: (user) {
           if (user == null) {
             // NOT LOGGED IN
@@ -29,19 +30,29 @@ class ProfileScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.account_circle, size: 100, color: Colors.grey),
+                  const Icon(
+                    Icons.account_circle,
+                    size: 100,
+                    color: Colors.grey,
+                  ),
                   const SizedBox(height: 24),
-                  const Text('You are not logged in.', style: TextStyle(fontSize: 18, color: Colors.grey)),
+                  const Text(
+                    'You are not logged in.',
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
                   const SizedBox(height: 24),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.deepPurple,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 12,
+                      ),
                     ),
                     onPressed: () => context.push('/login'),
                     child: const Text('Sign In or Register'),
-                  )
+                  ),
                 ],
               ),
             );
@@ -60,7 +71,11 @@ class ProfileScreen extends ConsumerWidget {
                     backgroundColor: Colors.deepPurple.withAlpha(50),
                     child: Text(
                       user.email[0].toUpperCase(),
-                      style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+                      style: const TextStyle(
+                        fontSize: 40,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.deepPurple,
+                      ),
                     ),
                   ),
                 ),
@@ -68,7 +83,10 @@ class ProfileScreen extends ConsumerWidget {
                 Center(
                   child: Text(
                     user.email,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -79,7 +97,7 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 48),
-                
+
                 // Account Stats (Mock)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -87,7 +105,10 @@ class ProfileScreen extends ConsumerWidget {
                     _buildStatCol('Orders', '12'),
                     GestureDetector(
                       onTap: () => context.push('/wishlist'),
-                      child: _buildStatCol('Wishlist', ref.watch(wishlistProvider).length.toString()),
+                      child: _buildStatCol(
+                        'Wishlist',
+                        ref.watch(wishlistProvider).length.toString(),
+                      ),
                     ),
                     _buildStatCol('Reviews', '3'),
                   ],
@@ -100,9 +121,9 @@ class ProfileScreen extends ConsumerWidget {
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () => context.push('/wishlist'),
                 ),
-                
+
                 const Spacer(),
-                
+
                 // Logout Button
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
@@ -111,11 +132,14 @@ class ProfileScreen extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   icon: const Icon(Icons.logout),
-                  label: const Text('Log Out', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  label: const Text(
+                    'Log Out',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   onPressed: () {
                     // Call the logout method on our notifier
                     ref.read(authProvider.notifier).logout();
-                    
+
                     // Show a nice snackbar
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Successfully logged out.')),
@@ -134,7 +158,14 @@ class ProfileScreen extends ConsumerWidget {
   Widget _buildStatCol(String label, String count) {
     return Column(
       children: [
-        Text(count, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+        Text(
+          count,
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.deepPurple,
+          ),
+        ),
         const SizedBox(height: 4),
         Text(label, style: const TextStyle(color: Colors.grey)),
       ],
